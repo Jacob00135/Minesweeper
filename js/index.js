@@ -1,6 +1,7 @@
 (function (window, document) {
     let db = null;
     const maxRecord = 10;  // 每个级别最多显示多少条记录
+    let allowQuestionMark = true; // 是否允许标记问号
     connectDatabase();
 
     // 连接数据库，并创建一个排行榜表
@@ -87,6 +88,7 @@
         round = []; // 周围的方块，以列表形式保存，列表中的元素是Block的实例
         button; // 对应的html元素节点
         #flag = false; // false表示没有插旗，true表示插旗
+        #questionMark = false; // 表示是否被标记为问号
 
         constructor (row, col, num) {
             this.row = row;
@@ -157,8 +159,20 @@
 
         rightClickEventListener (e) {
             if (e.button !== 2) return;
-            if (Block.gameArea.firstOpen) this.click();
-            this.blockObject.flag = !this.blockObject.flag;
+            if (Block.gameArea.firstOpen) {
+                this.click();
+                return;
+            }
+
+            // 右键标记的变化按标旗->问号->无标记循环
+            if (this.blockObject.flag) {
+                this.blockObject.flag = false;
+                this.blockObject.questionMark = true;
+            } else if (this.blockObject.questionMark) {
+                this.blockObject.questionMark = false;
+            } else {
+                this.blockObject.flag = true;
+            }
         }
 
         leftRightClickEventListener (e) {
@@ -192,6 +206,7 @@
 
         set status (value) {
             if (this.flag) return;
+            this.questionMark = false;
             this.#status = value;
             if (value === 1) {
                 this.button.classList.add('open');
@@ -234,6 +249,22 @@
                 }
             }
             Render.leftMineCount.innerHTML = leftMineCount;
+        }
+
+        get questionMark () {
+            return this.#questionMark;
+        }
+
+        set questionMark (value) {
+            if (!allowQuestionMark || this.status === 1) return;
+            this.#questionMark = value;
+            if (value) {
+                this.button.classList.add('question-mark');
+                this.button.innerHTML = '?';
+            } else {
+                this.button.classList.remove('question-mark');
+                this.button.innerHTML = '';
+            }
         }
     }
 
@@ -401,7 +432,7 @@
         }
 
         showAllMineBlock () {
-            // 显示所有的雷的位置，把所有标错非雷块的旗子改成“×”标记
+            // 显示所有的雷的位置，把所有标错非雷块的旗子改成“×”标记，把所有问号去掉
             for (let r = 1; r <= this.gameArea.rows - 2; r++) {
                 for (let c = 1; c <= this.gameArea.cols - 2; c++) {
                     let block = this.gameArea.blockArray[r][c];
@@ -409,6 +440,9 @@
                         block.button.classList.add('glyphicon');
                         block.button.classList.add('glyphicon-remove');
                         block.button.classList.add('mine');
+                        if (block.questionMark) {
+                            block.button.innerHTML = '';
+                        }
                     } else if (block.flag) {
                         block.button.classList.remove('glyphicon-flag');
                         block.button.classList.add('glyphicon-remove-circle');
@@ -735,6 +769,26 @@
             } else {
                 this.setAttribute('data-open', '1');
                 document.getElementById('block-area').setAttribute('data-animation', '1');
+            }
+        });
+
+        // 允许/禁止标记问号开关按钮
+        document.getElementById('allow-question-mark-switch').addEventListener('click', function (e) {
+            if (this.getAttribute('data-allow') === '1') {
+                // 将所有被标记为问号的方块都取消标记问号
+                this.setAttribute('data-allow', '0');
+                for (let r = 1; r <= Block.gameArea.rows - 2; r++) {
+                    for (let c = 1; c <= Block.gameArea.cols - 2; c++) {
+                        let block = Block.gameArea.blockArray[r][c];
+                        if (block.questionMark) {
+                            block.questionMark = false;
+                        }
+                    }
+                }
+                allowQuestionMark = false;
+            } else {
+                this.setAttribute('data-allow', '1');
+                allowQuestionMark = true;
             }
         });
 

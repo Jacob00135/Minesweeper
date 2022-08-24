@@ -29,7 +29,8 @@ body {
 
     #theme-switch,
     #animation-switch,
-    #show-rank-list {
+    #show-rank-list,
+    #allow-question-mark-switch {
         width: 26px;
         height: 26px;
         padding: 0;
@@ -42,12 +43,23 @@ body {
         border-radius: 0;
     }
 
-    #animation-switch[data-open="1"] {
+    #allow-question-mark-switch {
+        position: relative;
+        top: 1px;
+        bottom: -1px;
+        font-weight: 700;
+        text-align: center;
+        line-height: 26px;
+    }
+
+    #animation-switch[data-open="1"],
+    #allow-question-mark-switch[data-allow="1"] {
         background-color: #3aa3ff;
         color: #fff;
     }
 
-    #animation-switch[data-open="0"] {
+    #animation-switch[data-open="0"],
+    #allow-question-mark-switch[data-allow="0"] {
         background-color: #D0D0D7;
         color: #333;
     }
@@ -194,6 +206,10 @@ body {
         text-align: center;
         line-height: 1rem;
         cursor: default;
+
+        &.question-mark {
+            font-weight: 700;
+        }
 
         &::before {
             font-family: 'Glyphicons Halflings';
