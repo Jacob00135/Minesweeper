@@ -61,7 +61,6 @@ body #allow-question-mark-switch[data-allow="0"] {
   justify-content: center;
 }
 #rank-list table {
-  margin-bottom: 0;
   font-size: 18px;
 }
 #rank-list table th,

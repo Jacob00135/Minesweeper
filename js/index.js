@@ -4,28 +4,78 @@
     let allowQuestionMark = true; // 是否允许标记问号
     connectDatabase();
 
-    // 连接数据库，并创建一个排行榜表
+    // 初始化数据库
     function connectDatabase (callback) {
-        if (db === null) {
-            const request = indexedDB.open('Minesweeper', 1);
-            request.addEventListener('upgradeneeded', function (e) {
-                db = request.result;
-                if (!db.objectStoreNames.contains('rankList')) {
-                    const objectStore = db.createObjectStore('rankList', {autoIncrement: true, keyPath: 'id'});
-                    objectStore.createIndex('level', 'level');
-                }
-            });
-            request.addEventListener('success', function (e) {
-                db = request.result;
-                callback && callback();
-            });
-        } else {
+        if (db !== null) {
             callback && callback();
+            return;
         }
+
+        // 连接数据库
+        let firstConnection = false;
+        const request = indexedDB.open('Minesweeper', 1);
+        request.addEventListener('upgradeneeded', function (e) {
+            db = request.result;
+            firstConnection = true;
+
+            // 建立初始表，插入初始数据
+            if (!db.objectStoreNames.contains('statistic')) {
+                const objectStore = db.createObjectStore('statistic', {autoIncrement: true, keyPath: 'id'});
+                objectStore.createIndex('level', 'level', {unique: true});
+            }
+            if (!db.objectStoreNames.contains('rankList')) {
+                const objectStore = db.createObjectStore('rankList', {autoIncrement: true, keyPath: 'id'});
+                objectStore.createIndex('level', 'level');
+            }
+        });
+
+        request.addEventListener('success', function (e) {
+            db = request.result;
+
+            // 如果数据库已存在并且没有statistic表，则重建数据库
+            if (!firstConnection && !db.objectStoreNames.contains('statistic')) {
+                db = null;
+                const deleteDBRequest = indexedDB.deleteDatabase('Minesweeper');
+                deleteDBRequest.addEventListener('success', function (e) {
+                    connectDatabase(callback);
+                });
+            }
+
+            // 如果是新建数据库，则在升级事务关闭后，插入初始数据
+            if (firstConnection) {
+                db.close();
+                db = null;
+                const againRequest = indexedDB.open('Minesweeper', 1);
+                againRequest.addEventListener('success', function (e) {
+                    db = againRequest.result;
+                    const statistic = db.transaction(['statistic'], 'readwrite').objectStore('statistic');
+                    const recordTemplate = {
+                        level: 0,
+                        blindCount: 0,
+                        blindWinCount: 0,
+                        blindLoseCount: 0,
+                        blindTimeTotal: 0,
+                        sweepCount: 0,
+                        sweepWinCount: 0,
+                        sweepLoseCount: 0,
+                        sweepTimeTotal: 0
+                    };
+                    statistic.add(recordTemplate).addEventListener('success', function () {
+                        recordTemplate['level'] = 1;
+                        statistic.add(recordTemplate).addEventListener('success', function () {
+                            recordTemplate['level'] = 2;
+                            statistic.add(recordTemplate);
+                        });
+                    });
+                });
+            }
+
+            callback && callback();
+        });
     }
 
     // 向排行榜表中添加一条数据
-    function insertRecord (level, insertTime, gameTime) {
+    function insertRecord (level, insertTime, gameTime, isBlind) {
         connectDatabase(function () {
             // 获取表对象
             const rankList = db.transaction(['rankList'], 'readwrite').objectStore('rankList');
@@ -57,16 +107,63 @@
 
                 // 插入记录
                 if (insert) {
-                    rankList.add({level: level, insertTime: insertTime, gameTime: gameTime});
+                    rankList.add({
+                        level: level,
+                        insertTime: insertTime,
+                        gameTime: gameTime,
+                        isBlind: isBlind
+                    });
                 }
             });
         });
     }
 
     // 读取排行榜数据
-    function readRecord (callback) {
+    function readRankRecord (callback) {
         connectDatabase(function () {
             const request = db.transaction(['rankList']).objectStore('rankList').getAll();
+            request.addEventListener('success', function () {
+                callback && callback(request.result);
+            });
+        });
+    }
+
+    // 更新统计数据
+    function updateStatistic (level, isBlind, win, gameTime) {
+        // 获取表对象
+        const statistic = db.transaction(['statistic'], 'readwrite').objectStore('statistic');
+
+        // 获取当前的统计数据
+        const request = statistic.index('level').get(level);
+        request.addEventListener('success', function (e) {
+            const record = request.result;
+
+            // 更新数据
+            if (isBlind) {
+                record['blindCount'] = record['blindCount'] + 1;
+                if (win) {
+                    record['blindWinCount'] = record['blindWinCount'] + 1;
+                    record['blindTimeTotal'] = record['blindTimeTotal'] + gameTime;
+                } else {
+                    record['blindLoseCount'] = record['blindLoseCount'] + 1;
+                }
+            } else {
+                record['sweepCount'] = record['sweepCount'] + 1;
+                if (win) {
+                    record['sweepWinCount'] = record['sweepWinCount'] + 1;
+                    record['sweepTimeTotal'] = record['sweepTimeTotal'] + gameTime;
+                } else {
+                    record['sweepLoseCount'] = record['sweepLoseCount'] + 1;
+                }
+            }
+            statistic.put(record);
+        });
+    }
+
+    // 读取统计数据
+    function readStatistic (callback) {
+        connectDatabase(function () {
+            const request = db.transaction(['statistic'], 'readwrite').objectStore('statistic').getAll();
             request.addEventListener('success', function () {
                 callback && callback(request.result);
             });
@@ -232,6 +329,7 @@
             if (this.status === 1) return;
             this.#flag = value;
             if (value) {
+                Block.gameArea.isBlind = false;
                 this.button.classList.add('glyphicon');
                 this.button.classList.add('glyphicon-flag');
             } else {
@@ -283,6 +381,7 @@
         buttonElementArray; // 保存了每一个button元素的数组，形状是二维[rows - 2, cols - 2]
         firstOpen = true; // 是否是第一次翻开方块，用于让第一次翻开的方块永远是0方块
         restartGame = false; // 标记当前的游戏是否为重开的与上一局相同布局的游戏，若是，则不计入排行榜
+        isBlind = true; // 是否是盲扫
 
         constructor (rows, cols, mineCount) {
             if ((rows - 2) * (cols - 2) < mineCount) throw '雷数不能大于方块数！';
@@ -380,7 +479,6 @@
         static gameOverModal = document.getElementById('game-over');
         static leftMineCount = document.querySelector('#action-btn-group .left-mine-count .number');
         static rankListModal = document.getElementById('rank-list');
-        static rankTbodyArray = document.querySelectorAll('#rank-list table > tbody');
 
         gameArea;
 
@@ -466,8 +564,11 @@
             }
 
             // 若赢了游戏，并且本局不是点击了“重新开始本局”所开始的一局，则记录游戏时长、游戏结束时间
-            if (win && !this.gameArea.restartGame) {
-                insertRecord(GameArea.level, +new Date(), gameTime / 1000);
+            if (!this.gameArea.restartGame) {
+                if (win) {
+                    insertRecord(GameArea.level, +new Date(), gameTime / 1000, Block.gameArea.isBlind);
+                }
+                updateStatistic(GameArea.level, Block.gameArea.isBlind, win, gameTime);
             }
 
             // 显示模态框
@@ -529,10 +630,10 @@
         }
 
         static showRankList () {
-            // 从indexDB中获取排行榜数据
-            readRecord(function (result) {
+            // 从数据库中获取排行榜数据
+            readRankRecord(function (result) {
                 // 清除原排名内容
-                Render.rankTbodyArray.forEach((tbody) => {
+                document.querySelectorAll('#rank-list table.rank > tbody').forEach((tbody) => {
                     tbody.innerHTML = '';
                 });
 
@@ -543,7 +644,7 @@
                     rankData[level].push(record);
                 });
 
-                // 对数据按游戏用时进行排序，并渲染到模态框的表格中
+                // 对数据按游戏用时进行排序，并渲染到模态框的排行表格中
                 rankData.forEach((levelRankArray, level) => {
                     levelRankArray.sort(function (v1, v2) {
                         return v1['gameTime'] - v2['gameTime'];
@@ -551,20 +652,59 @@
 
                     const tbodyHTML = [];
                     levelRankArray.forEach((record, i) => {
-                        const date = (new Date(record['insertTime'])).toLocaleString().replace(/\//g, '-');
+                        const date = (new Date(record['insertTime'])).toLocaleDateString().replace(/\//g, '-');
                         tbodyHTML.push(
-                            '<tr><td>{{ i }}</td><td>{{ gameTime }}</td><td>{{ insertTime }}</td></tr>'
+                            '<tr><td>{{ i }}</td><td>{{ gameTime }}</td><td>{{ insertTime }}</td><td>{{ isBlind }}</td></tr>'
                                 .replace('{{ i }}', String(i + 1))
                                 .replace('{{ gameTime }}', record['gameTime'])
                                 .replace('{{ insertTime }}', date)
+                                .replace('{{ isBlind }}', record['isBlind'] ? '是' : '否')
                         );
                     });
 
-                    document.querySelector('#rank-list table[data-level="' + level + '"] > tbody').innerHTML = tbodyHTML.join('');
+                    document.querySelector('#rank-list table.rank[data-level="' + level + '"] > tbody').innerHTML = tbodyHTML.join('');
                 });
 
-                // 显示模态框
-                $(Render.rankListModal).modal('show');
+                // 从数据库中获取统计数据
+                readStatistic(function (result) {
+                    // 将统计数据渲染到模态框的统计表格中
+                    result.forEach((record) => {
+                        const tbody = document.querySelector('#rank-list table.statistic[data-level="' + record['level'] + '"] > tbody');
+
+                        const blindWinCount = record['blindWinCount'];
+                        const blindCount = record['blindCount'];
+                        const blindTimeTotal = record['blindTimeTotal'];
+                        const blindWinRate = blindCount === 0 ? '_' : (100 * blindWinCount / blindCount).toFixed(2);
+                        const blindTimeMean = blindWinCount === 0 ? '_' : (blindTimeTotal / blindWinCount / 1000).toFixed(3);
+                        tbody.querySelector('.blind > .win-count').innerHTML = blindWinCount;
+                        tbody.querySelector('.blind > .lose-count').innerHTML = record['blindLoseCount'];
+                        tbody.querySelector('.blind > .win-rate').innerHTML = blindWinRate;
+                        tbody.querySelector('.blind > .time-mean').innerHTML = blindTimeMean;
+
+                        const sweepWinCount = record['sweepWinCount'];
+                        const sweepCount = record['sweepCount'];
+                        const sweepTimeTotal = record['sweepTimeTotal'];
+                        const sweepWinRate = sweepCount === 0 ? '_' : (100 * sweepWinCount / sweepCount).toFixed(2);
+                        const sweepTimeMean = sweepWinCount === 0 ? '_' : (sweepTimeTotal / sweepWinCount / 1000).toFixed(3);
+                        tbody.querySelector('.not-blind > .win-count').innerHTML = sweepWinCount;
+                        tbody.querySelector('.not-blind > .lose-count').innerHTML = record['sweepLoseCount'];
+                        tbody.querySelector('.not-blind > .win-rate').innerHTML = sweepWinRate;
+                        tbody.querySelector('.not-blind > .time-mean').innerHTML = sweepTimeMean;
+
+                        const winCount = blindWinCount + sweepWinCount;
+                        const gameCount = blindCount + sweepCount;
+                        const timeTotal = blindTimeTotal + sweepTimeTotal;
+                        const winRate = gameCount === 0 ? '_' : (100 * winCount / gameCount).toFixed(2);
+                        const timeMean = winCount === 0 ? '_' : (timeTotal / winCount / 1000).toFixed(3);
+                        tbody.querySelector('.total > .win-count').innerHTML = winCount;
+                        tbody.querySelector('.total > .lose-count').innerHTML = record['blindLoseCount'] + record['sweepLoseCount'];
+                        tbody.querySelector('.total > .win-rate').innerHTML = winRate;
+                        tbody.querySelector('.total > .time-mean').innerHTML = timeMean;
+                    });
+
+                    // 显示模态框
+                    $(Render.rankListModal).modal('show');
+                });
             });
         }
 
@@ -794,6 +934,7 @@
 
         // 显示排行榜的按钮
         document.getElementById('show-rank-list').addEventListener('click', Render.showRankList);
+        console.log(Render.statisticTbodyObject);
     }
 
     main();

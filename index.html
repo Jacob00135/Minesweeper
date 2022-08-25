@@ -42,7 +42,7 @@
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
                             aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="rank-list-title">排行榜</h4>
+                    <h4 class="modal-title" id="rank-list-title">统计数据</h4>
                 </div>
                 <div class="modal-body">
                     <ul class="nav nav-tabs rank-table-nav">
@@ -61,39 +61,153 @@
                     </ul>
                     <div class="tab-content">
                         <div role="tabpanel" class="tab-pane active" id="rank-table-level-0">
-                            <table class="table table-striped" data-level="0">
+                            <!-- 排名部分 -->
+                            <table class="table table-striped rank" data-level="0">
                                 <thead>
                                     <tr>
                                         <th>排名</th>
                                         <th>用时(s)</th>
                                         <th>日期</th>
+                                        <th>盲扫</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                            </table>
+
+                            <!-- 统计部分 -->
+                            <table class="table table-striped statistic" data-level="0">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>胜</th>
+                                        <th>负</th>
+                                        <th>胜率(%)</th>
+                                        <th>平均用时(s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="blind">
+                                        <td>盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="not-blind">
+                                        <td>非盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="total">
+                                        <td>总计</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
                         <div role="tabpanel" class="tab-pane" id="rank-table-level-1">
-                            <table class="table table-striped" data-level="1">
+                            <!-- 排名部分 -->
+                            <table class="table table-striped rank" data-level="1">
                                 <thead>
                                     <tr>
                                         <th>排名</th>
                                         <th>用时(s)</th>
                                         <th>日期</th>
+                                        <th>盲扫</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
+
+                            <!-- 统计部分 -->
+                            <table class="table table-striped statistic" data-level="1">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>胜</th>
+                                        <th>负</th>
+                                        <th>胜率(%)</th>
+                                        <th>平均用时(s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="blind">
+                                        <td>盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="not-blind">
+                                        <td>非盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="total">
+                                        <td>总计</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                         <div role="tabpanel" class="tab-pane" id="rank-table-level-2">
-                            <table class="table table-striped" data-level="2">
+                            <!-- 排名部分 -->
+                            <table class="table table-striped rank" data-level="2">
                                 <thead>
                                     <tr>
                                         <th>排名</th>
                                         <th>用时(s)</th>
                                         <th>日期</th>
+                                        <th>盲扫</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                            </table>
+
+                            <!-- 统计部分 -->
+                            <table class="table table-striped statistic" data-level="2">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>胜</th>
+                                        <th>负</th>
+                                        <th>胜率(%)</th>
+                                        <th>平均用时(s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="blind">
+                                        <td>盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="not-blind">
+                                        <td>非盲扫</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                    <tr class="total">
+                                        <td>总计</td>
+                                        <td class="win-count">0</td>
+                                        <td class="lose-count">0</td>
+                                        <td class="win-rate">0</td>
+                                        <td class="time-mean">0</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -113,7 +227,7 @@
             <button id="theme-switch" class="glyphicon glyphicon-adjust" data-theme="dark" type="button" title="切换主题"></button>
             <button id="animation-switch" class="glyphicon glyphicon-flash" data-open="1" type="button" title="开/关动画效果"></button>
             <button id="allow-question-mark-switch" type="button" data-allow="1" title="允许/禁止标记问号">?</button>
-            <button id="show-rank-list" class="glyphicon glyphicon-list-alt" type="button" title="排行榜"></button>
+            <button id="show-rank-list" class="glyphicon glyphicon-list-alt" type="button" title="统计"></button>
         </div>
         <!-- 换主题色、动画效果开关、排行榜 [end] -->
 
